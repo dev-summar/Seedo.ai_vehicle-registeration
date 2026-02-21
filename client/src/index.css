@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .login-card-entrance {
+    animation: login-card-entrance 0.45s ease-out forwards;
+  }
+  .vehicle-page-entrance {
+    animation: vehicle-page-entrance 0.5s ease-out forwards;
+  }
+}
+@keyframes login-card-entrance {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes vehicle-page-entrance {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
