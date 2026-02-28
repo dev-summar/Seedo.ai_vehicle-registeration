@@ -14,6 +14,6 @@ router.post('/login', adminController.login);
 // Protected - require admin JWT
 router.get('/me', adminAuthMiddleware, adminController.me);
 router.get('/vehicles', adminAuthMiddleware, adminController.getVehicles);
-router.get('/vehicles/:id/rc', adminAuthMiddleware, adminController.getVehicleRc);
+router.delete('/vehicles/:id', adminAuthMiddleware, adminController.deleteVehicle);
 
 module.exports = router;

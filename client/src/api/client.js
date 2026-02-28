@@ -25,24 +25,13 @@ export async function login(email, password) {
 }
 
 export async function registerVehicle(formData) {
-  const url = `${getBaseUrl()}/api/vehicle/register`;
-  const token = localStorage.getItem(TOKEN_KEYS.vehicle);
-  const headers = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  try {
-    const res = await fetch(url, {
+  const { res, data } = await apiFetch(
+    '/api/vehicle/register',
+    {
       method: 'POST',
-      headers,
-      body: formData,
-    });
-    const data = await res.json().catch(() => ({}));
-    return { ok: res.ok, status: res.status, data };
-  } catch (err) {
-    throw new Error(
-      err.message === 'Failed to fetch'
-        ? 'Cannot reach server. Check backend and VITE_API_BASE_URL.'
-        : err.message
-    );
-  }
+      body: JSON.stringify(formData),
+    },
+    { tokenKey: 'vehicle' }
+  );
+  return { ok: res.ok, status: res.status, data };
 }

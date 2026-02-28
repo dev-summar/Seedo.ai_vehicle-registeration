@@ -62,7 +62,7 @@ export default function Login() {
             MIET Jammu – Vehicle Registration
           </h1>
           <p className="text-center text-sm mt-2 mb-6" style={{ color: '#64748b' }}>
-            Sign in with your institute credentials
+            Sign in with your PI-360 Credentials
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-5">

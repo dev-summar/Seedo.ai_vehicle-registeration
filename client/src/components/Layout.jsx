@@ -14,11 +14,8 @@ export default function Layout({ children }) {
     : '?';
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#f8fafc' }}>
-      <header
-        className="bg-white border-b flex items-center"
-        style={{ borderColor: '#e2e8f0', boxShadow: '0 1px 0 0 rgba(0,0,0,0.04)' }}
-      >
+    <div className="layout-root">
+      <header className="layout-header flex items-center">
         <div className="max-w-[900px] w-full mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="text-lg font-semibold text-slate-800">
             MIET Jammu – Vehicle Registration
@@ -47,7 +44,7 @@ export default function Layout({ children }) {
           </div>
         </div>
       </header>
-      <main className="max-w-[900px] w-full mx-auto px-4 py-10">{children}</main>
+      <main className="layout-main">{children}</main>
     </div>
   );
 }

@@ -1,15 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { getAdminVehicles, fetchAdminRcFile } from '../api/adminClient';
+import { getAdminVehicles, deleteAdminVehicle } from '../api/adminClient';
 import {
   Search,
   ChevronLeft,
   ChevronRight,
-  FileText,
-  X,
-  ExternalLink,
   Car,
+  Trash2,
 } from 'lucide-react';
 
 const PAGE_SIZES = [10, 20, 30, 50];
@@ -27,8 +25,8 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [vehicleType, setVehicleType] = useState('');
-  const [preview, setPreview] = useState(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState(''); // '', 'verified', 'rejected'
+  const [deletingId, setDeletingId] = useState(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -39,6 +37,7 @@ export default function AdminDashboard() {
         limit,
         search,
         vehicle_type: vehicleType,
+        status: statusFilter,
       });
       if (ok && (data.status === true || data.status === 'true')) {
         setVehicles(Array.isArray(data.data) ? data.data : []);
@@ -55,7 +54,7 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, search, vehicleType, logout, navigate]);
+  }, [page, limit, search, vehicleType, statusFilter, logout, navigate]);
 
   useEffect(() => {
     fetchData();
@@ -67,30 +66,26 @@ export default function AdminDashboard() {
     setPage(1);
   };
 
-  const handlePreview = async (vehicle) => {
-    setPreviewLoading(true);
-    setPreview(null);
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this vehicle entry? This cannot be undone.')) return;
+    setDeletingId(id);
+    setError('');
     try {
-      const result = await fetchAdminRcFile(vehicle._id);
-      if (result.ok) {
-        setPreview({
-          vehicle,
-          url: result.url,
-          contentType: result.contentType,
-        });
+      const { ok, status, data } = await deleteAdminVehicle(id);
+      if (ok && (data?.status === true || status === 200)) {
+        setVehicles((prev) => prev.filter((v) => v._id !== id));
+        setTotal((t) => Math.max(0, t - 1));
+      } else if (status === 401) {
+        logout();
+        navigate('/admin/login', { replace: true });
       } else {
-        setError('Could not load RC document');
+        setError(data?.message || 'Failed to delete');
       }
     } catch {
-      setError('Could not load RC document');
+      setError('Network error');
     } finally {
-      setPreviewLoading(false);
+      setDeletingId(null);
     }
-  };
-
-  const closePreview = () => {
-    if (preview?.url) URL.revokeObjectURL(preview.url);
-    setPreview(null);
   };
 
   const formatDate = (d) => {
@@ -144,6 +139,18 @@ export default function AdminDashboard() {
             <option value="Two-Wheeler">Two-Wheeler</option>
             <option value="Four-Wheeler">Four-Wheeler</option>
           </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
+            className="px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-600 outline-none min-w-[120px]"
+          >
+            <option value="">All status</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
           <button
             type="submit"
             className="px-4 py-2.5 bg-slate-800 text-white font-medium rounded-xl hover:bg-slate-900 transition-colors"
@@ -175,64 +182,115 @@ export default function AdminDashboard() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/80">
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Owner</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
-                    Vehicle
+                    Status
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
+                    RC Number
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
+                    Owner Name
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
+                    Vehicle Number
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700 hidden md:table-cell">
-                    Type
-                  </th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700 hidden md:table-cell">
-                    Account Type
+                    Vehicle Type
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700 hidden lg:table-cell">
-                    Mobile
+                    Model
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700 hidden lg:table-cell">
-                    Registered
+                    Fuel Type
                   </th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-slate-700">RC</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700 hidden lg:table-cell">
+                    Registration Date
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700 hidden lg:table-cell">
+                    User
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700 hidden lg:table-cell">
+                    Created At
+                  </th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-slate-700">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {vehicles.map((v) => (
+                {vehicles.map((v) => {
+                  const isApproved = v.status === 'Approved' || v.status === 'verified' || v.verified === true;
+                  const displayStatus = isApproved ? 'Approved' : 'Rejected';
+                  return (
                   <tr
                     key={v._id}
                     className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors"
                   >
                     <td className="py-3 px-4">
-                      <div>
-                        <p className="font-medium text-slate-800">{v.name || '-'}</p>
-                        <p className="text-sm text-slate-500">{v.email || '-'}</p>
-                      </div>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          displayStatus === 'Approved'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                        title={displayStatus === 'Rejected' ? v.rejection_reason : undefined}
+                      >
+                        {displayStatus}
+                      </span>
+                      {displayStatus === 'Rejected' && v.rejection_reason && (
+                        <p className="text-xs text-slate-500 mt-1 max-w-[180px] truncate" title={v.rejection_reason}>
+                          {v.rejection_reason}
+                        </p>
+                      )}
                     </td>
                     <td className="py-3 px-4 font-mono font-medium text-slate-800">
-                      {v.vehicle_number}
+                      {v.rc_number}
+                    </td>
+                    <td className="py-3 px-4 text-slate-800">
+                      {v.owner_name || '-'}
+                    </td>
+                    <td className="py-3 px-4 font-mono text-slate-800">
+                      {v.vehicle_number || '-'}
                     </td>
                     <td className="py-3 px-4 hidden md:table-cell text-slate-600">
-                      {v.vehicle_type}
-                    </td>
-                    <td className="py-3 px-4 hidden md:table-cell text-slate-600">
-                      {v.account_type || '-'}
+                      {v.vehicle_type || '-'}
                     </td>
                     <td className="py-3 px-4 hidden lg:table-cell text-slate-600">
-                      {v.mobile || '-'}
+                      {v.model || '-'}
+                    </td>
+                    <td className="py-3 px-4 hidden lg:table-cell text-slate-600">
+                      {v.fuel_type || '-'}
+                    </td>
+                    <td className="py-3 px-4 hidden lg:table-cell text-slate-600 text-sm">
+                      {v.registration_date || '-'}
+                    </td>
+                    <td className="py-3 px-4 hidden lg:table-cell text-slate-600">
+                      <div>
+                        <p className="font-medium text-slate-800">{v.student_name || v.user_name || '-'}</p>
+                        {v.account_type ? (
+                          <p className="text-xs text-slate-500 capitalize">{v.account_type}</p>
+                        ) : null}
+                        <p className="text-sm text-slate-500">{v.email || v.user_email || '-'}</p>
+                      </div>
                     </td>
                     <td className="py-3 px-4 hidden lg:table-cell text-slate-500 text-sm">
                       {formatDate(v.created_at)}
                     </td>
                     <td className="py-3 px-4 text-right">
                       <button
-                        onClick={() => handlePreview(v)}
-                        disabled={previewLoading}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+                        type="button"
+                        onClick={() => handleDelete(v._id)}
+                        disabled={deletingId === v._id}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                        title="Delete entry"
                       >
-                        <FileText size={16} />
-                        View RC
+                        <Trash2 size={16} />
+                        {deletingId === v._id ? 'Deleting…' : 'Delete'}
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -282,65 +340,7 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {previewLoading && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-white border-t-transparent" />
-        </div>
-      )}
-      {preview && (
-        <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
-          onClick={closePreview}
-          role="dialog"
-          aria-modal="true"
-          aria-label="RC Preview"
-        >
-          <div
-            className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-              <h3 className="font-semibold text-slate-800">
-                RC - {preview.vehicle?.vehicle_number}
-              </h3>
-              <div className="flex items-center gap-2">
-                <a
-                  href={preview.url}
-                  download={`RC_${preview.vehicle?.vehicle_number}${preview.contentType?.includes('pdf') ? '.pdf' : '.jpg'}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg"
-                >
-                  <ExternalLink size={16} />
-                  Open
-                </a>
-                <button
-                  onClick={closePreview}
-                  className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
-                  aria-label="Close"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 overflow-auto p-4 bg-slate-50 min-h-[400px]">
-              {preview.contentType?.includes('pdf') ? (
-                <iframe
-                  src={preview.url}
-                  title="RC Document"
-                  className="w-full h-[70vh] rounded-lg border-0"
-                />
-              ) : (
-                <img
-                  src={preview.url}
-                  alt="RC Document"
-                  className="max-w-full max-h-[70vh] mx-auto rounded-lg shadow"
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* RC preview removed – Surepass verification stores structured data only */}
     </div>
   );
 }

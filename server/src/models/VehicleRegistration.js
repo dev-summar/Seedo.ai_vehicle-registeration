@@ -1,23 +1,40 @@
 const mongoose = require('mongoose');
 
 /**
- * Vehicle registration schema
- * RC files are stored on Cloudinary; rc_url is the secure_url, cloudinary_public_id for deletion
+ * Vehicle registration schema (Surepass RC verification).
+ * owner_name is always from Surepass response; never store user-entered owner_name directly.
  */
 const vehicleRegistrationSchema = new mongoose.Schema({
-  pi_user_id: { type: String, required: true },
-  name: { type: String, required: true },
-  email: { type: String, required: true },
-  mobile: { type: String, default: '' },
-  account_type: { type: String, default: '' },
-  department: { type: String, default: '' },
-  vehicle_number: { type: String, required: true, uppercase: true },
-  vehicle_type: { type: String, required: true, enum: ['Two-Wheeler', 'Four-Wheeler'] },
-  rc_url: { type: String, required: true }, // Cloudinary secure_url
-  cloudinary_public_id: { type: String, required: true }, // For deletion/rollback
+  rc_number: { type: String, required: true, trim: true },
+  owner_name: { type: String, default: '', trim: true }, // From Surepass only
+
+  vehicle_number: { type: String, default: '', trim: true, uppercase: true },
+  vehicle_type: { type: String, default: '', trim: true },
+  vehicle_class: { type: String, default: '', trim: true },
+  fuel_type: { type: String, default: '', trim: true },
+  manufacturer: { type: String, default: '', trim: true },
+  model: { type: String, default: '', trim: true },
+  registration_date: { type: String, default: '', trim: true },
+  insurance_valid_till: { type: String, default: '', trim: true },
+
+  user_id: { type: String, required: true, trim: true },
+  student_name: { type: String, default: '', trim: true },
+  email: { type: String, default: '', trim: true },
+  mobile: { type: String, default: '', trim: true },
+  account_type: { type: String, default: '', trim: true },
+  department: { type: String, default: '', trim: true },
+
+  user_name: { type: String, default: '', trim: true }, // Alias for dashboard
+  user_email: { type: String, default: '', trim: true },
+
+  status: { type: String, enum: ['Approved', 'Rejected'], default: 'Approved' },
+  rejection_reason: { type: String, default: '', trim: true },
   created_at: { type: Date, default: Date.now },
 });
 
-vehicleRegistrationSchema.index({ pi_user_id: 1, vehicle_number: 1 }, { unique: true });
+vehicleRegistrationSchema.index(
+  { rc_number: 1 },
+  { unique: true, partialFilterExpression: { status: 'Approved' } }
+);
 
 module.exports = mongoose.model('VehicleRegistration', vehicleRegistrationSchema);

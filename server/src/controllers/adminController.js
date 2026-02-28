@@ -42,7 +42,7 @@ async function login(req, res) {
       admin: adminData,
     });
   } catch (err) {
-    console.error('[Admin] Login error:', err);
+    if (process.env.NODE_ENV !== 'production') console.error('[Admin] Login error:', err);
     return res.status(500).json({ status: false, message: 'Server Error' });
   }
 }
@@ -73,6 +73,7 @@ async function getVehicles(req, res) {
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
     const search = (req.query.search || '').trim();
     const vehicleType = (req.query.vehicle_type || '').trim();
+    const statusFilter = (req.query.status || '').trim().toLowerCase(); // '', 'approved', 'rejected', 'verified'
     const skip = (page - 1) * limit;
 
     const filter = {};
@@ -80,14 +81,28 @@ async function getVehicles(req, res) {
       const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(escaped, 'i');
       filter.$or = [
+        { rc_number: regex },
+        { owner_name: regex },
         { vehicle_number: regex },
-        { name: regex },
+        { user_name: regex },
+        { user_email: regex },
+        { student_name: regex },
         { email: regex },
-        { mobile: regex },
+        { rejection_reason: regex },
       ];
     }
-    if (vehicleType && ['Two-Wheeler', 'Four-Wheeler'].includes(vehicleType)) {
-      filter.vehicle_type = vehicleType;
+    // Map filter "Two-Wheeler" / "Four-Wheeler" to Surepass vehicle_type values (e.g. Moped(2WN), Motor Car(LMV))
+    if (vehicleType === 'Two-Wheeler') {
+      filter.vehicle_type = { $regex: /moped|motorcycle|scooter|2\s*wn|2\s*[- ]?wheeler|2w/i };
+    } else if (vehicleType === 'Four-Wheeler') {
+      filter.vehicle_type = { $regex: /motor\s*car|lmv|jeep|car\s*\(|4\s*[- ]?wheeler|sedan|suv|hmv/i };
+    }
+    if (statusFilter === 'approved' || statusFilter === 'verified') {
+      filter.$and = [
+        { $or: [{ status: 'Approved' }, { status: 'verified' }, { verified: true }] },
+      ];
+    } else if (statusFilter === 'rejected') {
+      filter.$and = [{ $or: [{ status: 'Rejected' }, { status: 'rejected' }] }];
     }
 
     const [total, data] = await Promise.all([
@@ -111,28 +126,28 @@ async function getVehicles(req, res) {
       data,
     });
   } catch (err) {
-    console.error('[Admin] getVehicles error:', err);
+    if (process.env.NODE_ENV !== 'production') console.error('[Admin] getVehicles error:', err);
     return res.status(500).json({ status: false, message: 'Server Error' });
   }
 }
 
 /**
- * GET /api/admin/vehicles/:id/rc
- * Protected - redirect to Cloudinary RC URL
+ * DELETE /api/admin/vehicles/:id
+ * Protected - delete a vehicle registration entry
  */
-async function getVehicleRc(req, res) {
+async function deleteVehicle(req, res) {
   try {
     const id = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ status: false, message: 'Invalid vehicle ID' });
     }
-    const doc = await VehicleRegistration.findById(id).select('rc_url').lean();
-    if (!doc || !doc.rc_url) {
-      return res.status(404).json({ status: false, message: 'RC document not found' });
+    const doc = await VehicleRegistration.findByIdAndDelete(id);
+    if (!doc) {
+      return res.status(404).json({ status: false, message: 'Entry not found' });
     }
-    return res.redirect(doc.rc_url);
+    return res.json({ status: true, message: 'Entry deleted successfully' });
   } catch (err) {
-    console.error('[Admin] getVehicleRc error:', err);
+    if (process.env.NODE_ENV !== 'production') console.error('[Admin] deleteVehicle error:', err);
     return res.status(500).json({ status: false, message: 'Server Error' });
   }
 }
@@ -141,5 +156,6 @@ module.exports = {
   login,
   me,
   getVehicles,
-  getVehicleRc,
+  deleteVehicle,
 };
+

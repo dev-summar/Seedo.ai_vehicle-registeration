@@ -110,6 +110,10 @@ export default function App() {
 
       {/* Admin: separate auth, no PI-360 */}
       <Route
+        path="/admin"
+        element={<Navigate to="/admin/login" replace />}
+      />
+      <Route
         path="/admin/login"
         element={
           <AdminPublicRoute>

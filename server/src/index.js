@@ -2,6 +2,14 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
+// Keep process alive on unhandled errors (log instead of exit)
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
