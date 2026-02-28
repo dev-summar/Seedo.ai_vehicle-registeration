@@ -1,52 +1,78 @@
-# MIET Jammu - Vehicle Registration
+# MIET Jammu – Vehicle Registration
 
-A temporary vehicle registration web application for MIET Jammu, integrated with PI-360 Login API.
+Web application for temporary vehicle registration at MIET Jammu. Users sign in with **PI-360 credentials**; the backend validates against the PI-360 API and issues a JWT. Admins use a separate dashboard with email/password auth.
+
+---
+
+## Features
+
+- **User login** – Sign in with your PI-360 Credentials (email/password validated via PI-360 API).
+- **Vehicle registration** – Submit vehicle details and RC document (PDF/image); optional Surepass RC verification.
+- **Admin dashboard** – Separate login; view, search, and filter registrations; download RC files (Cloudinary).
+- **Security** – JWT for users (PI-360) and admins (8h expiry), file validation, rate limiting, Helmet, CORS.
+
+---
 
 ## Tech Stack
 
-- **Frontend**: React 18, Vite, TailwindCSS, React Router
-- **Backend**: Node.js, Express, MongoDB
-- **Auth**: PI-360 JWT (vehicle registration); separate Admin JWT (admin dashboard, 8hr expiry)
+| Layer    | Stack |
+|----------|--------|
+| Frontend | React 18, Vite, TailwindCSS, React Router, Lucide React |
+| Backend  | Node.js, Express |
+| Database | MongoDB (Mongoose) |
+| Auth     | PI-360 JWT (users); custom Admin JWT (dashboard) |
+| Storage  | Cloudinary (RC documents) |
+
+---
 
 ## Prerequisites
 
-- Node.js 18+
-- MongoDB (local or Atlas)
-- npm or yarn
+- **Node.js** 18+
+- **MongoDB** (local or Atlas)
+- **npm** (or yarn)
+
+---
 
 ## Project Structure
 
 ```
-Seedo.ai-vehicle/
-├── client/                 # React frontend
+Seedo.ai_vehicle-registeration/
+├── client/                    # React frontend
+│   ├── public/                # favicon, static assets
 │   ├── src/
-│   │   ├── api/           # API client
-│   │   ├── components/    # Layout, etc.
-│   │   ├── context/      # Auth context
-│   │   └── pages/        # Login, VehicleForm, AdminLogin, AdminDashboard
-│   └── ...
-├── server/                 # Express backend
+│   │   ├── api/               # client.js, adminClient.js
+│   │   ├── components/       # Layout, AdminLayout, Spinner
+│   │   ├── context/           # AuthContext, AdminAuthContext
+│   │   ├── pages/             # Login, VehicleForm, AdminLogin, AdminDashboard
+│   │   └── services/          # api.js (base URL, auth headers)
+│   └── index.html
+├── server/                    # Express backend
 │   ├── src/
-│   │   ├── config/       # DB, Cloudinary
-│   │   ├── controllers/ # adminController
-│   │   ├── middleware/  # auth, adminAuth, upload
-│   │   ├── models/       # VehicleRegistration, Admin
-│   │   ├── routes/       # auth, vehicle, adminRoutes
-│   │   └── scripts/      # seedAdmin.js
-│   └── ...
-├── .env.example
+│   │   ├── config/            # db.js, roleCache.js
+│   │   ├── controllers/       # adminController.js
+│   │   ├── middleware/        # auth.js, adminAuth.js
+│   │   ├── models/            # VehicleRegistration, Admin
+│   │   ├── routes/            # auth, vehicle, adminRoutes
+│   │   └── services/          # surepassService.js (RC verification)
+│   ├── scripts/               # seedAdmin.js, resetAdmin.js
+│   └── .env
+├── package.json               # Root scripts: dev, server, client, install:all
 └── README.md
 ```
 
+---
+
 ## Setup
 
-### 1. Install Dependencies
+### 1. Install dependencies
+
+From the project root:
 
 ```bash
 npm run install:all
 ```
 
-Or separately:
+Or manually:
 
 ```bash
 npm install
@@ -54,167 +80,207 @@ cd server && npm install
 cd ../client && npm install
 ```
 
-### 2. Environment Variables
+### 2. Environment variables
 
-**Server** (`server/.env`):
+**Server** – copy `server/.env.example` to `server/.env` (or create `.env`) and set:
 
-```env
-PI360_API_URL=https://pi360.net/site/api/api_login_user_web.php
-PI360_INSTITUTE_ID=mietjammu
+| Variable | Description |
+|----------|-------------|
+| `PI360_API_URL` | PI-360 login API URL (e.g. `https://pi360.net/site/api/api_login_user_web.php`) |
+| `PI360_INSTITUTE_ID` | Institute ID (e.g. `mietjammu`) |
+| `JWT_SECRET` | **Same secret PI-360 uses** to sign tokens; required for verification |
+| `MONGODB_URI` | MongoDB connection string |
+| `PORT` | Server port (e.g. `5000`) |
+| `ADMIN_JWT_SECRET` | Secret for admin JWT (dashboard) |
+| `CLIENT_URL` | Frontend origin for CORS (e.g. `http://localhost:5173`) |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
+| `CLOUDINARY_API_KEY` | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
+| `SUREPASS_API_URL` | (Optional) Surepass RC API URL |
+| `SUREPASS_API_KEY` | (Optional) Surepass API key |
+| `RATE_LIMIT_MAX` | (Optional) Global rate limit |
+| `VEHICLE_REGISTER_RATE_LIMIT` | (Optional) Rate limit for vehicle registration |
 
-# JWT secret: must be the SAME secret PI-360 uses to sign the token.
-# If you get "invalid signature", get the signing secret from PI-360 and set it here.
-JWT_SECRET=your-secure-jwt-secret
+**Client** – create as needed:
 
-MONGODB_URI=mongodb://localhost:27017/miet-vehicle-registration
-PORT=5000
+- `client/.env.development` – e.g. `VITE_API_BASE_URL=http://localhost:5000` (or leave empty to use Vite proxy)
+- `client/.env.production` – e.g. `VITE_API_BASE_URL=https://your-api-domain.com`
 
-MAX_FILE_SIZE=5242880
+Optional:
 
-# Cloudinary (RC file storage)
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
+- `VITE_MIET_LOGO_URL` – Override logo URL on login/header.
+- `VITE_PI360_LOGIN_URL` – If set, the “Sign in with PI-360” button can redirect to this URL (e.g. PI-360 SSO).
 
-# Admin dashboard (separate from PI-360)
-ADMIN_JWT_SECRET=your-admin-jwt-secret
-```
-
-**Client** – use env per environment (no hardcoded URLs):
-
-- `client/.env.development`: `VITE_API_BASE_URL=http://localhost:5000`
-- `client/.env.production`: `VITE_API_BASE_URL=https://your-production-domain.com`
-
-Optional fallback: `client/.env` with `VITE_API_URL` or `VITE_API_BASE_URL`. All API calls go through `client/src/services/api.js` (central base URL, token attachment, 401 → logout/redirect).
+All client API calls use `client/src/services/api.js` (base URL, token attachment, 401 → logout/redirect).
 
 ### 3. MongoDB
 
-Ensure MongoDB is running. For local:
+Start MongoDB locally or use Atlas and set `MONGODB_URI` in `server/.env`.
 
-```bash
-mongod
-```
-
-Or use MongoDB Atlas and set `MONGODB_URI` accordingly.
-
-### 4. Seed first admin (for dashboard)
+### 4. Seed admin user (for dashboard)
 
 ```bash
 cd server && npm run seed:admin
 ```
 
-Creates admin: `admin@mietjammu.in` / `ChangeMe123`. Change password after first login.
+Default admin: `admin@mietjammu.in` / `ChangeMe123`. Change the password after first login.
 
-## Run Locally
+---
 
-**Option A: Both together**
+## Run locally
+
+**Run both backend and frontend:**
 
 ```bash
 npm run dev
 ```
 
-**Option B: Separate terminals**
+**Or in separate terminals:**
 
 ```bash
-# Terminal 1 - Backend
+# Terminal 1 – backend
 npm run server
 
-# Terminal 2 - Frontend
+# Terminal 2 – frontend
 npm run client
 ```
 
-- Frontend: http://localhost:5173  
-- Backend: http://localhost:5000
+- **Frontend:** http://localhost:5173  
+- **Backend:** http://localhost:5000  
 
-**Verify backend:** `curl http://localhost:5000/api/health` should return `{"ok":true}`
+**Health check:** `curl http://localhost:5000/api/health` → `{"ok":true}`
 
-### Troubleshooting: net::ERR on vehicle submit
+### If vehicle submit fails (net::ERR, etc.)
 
-1. **Backend must be running** – Both `npm run server` and `npm run client` must be active (or use `npm run dev`).
-2. **Check browser console** – Look for `[Vehicle API] Request:` log with the request URL.
-3. **Check backend terminal** – You should see `[Vehicle] POST /register hit` when submit is clicked.
-4. **VITE_API_URL** – Leave empty in dev so Vite proxy forwards `/api` to the backend. If set, use `http://localhost:5000` (no trailing slash).
-5. **CORS** – Dev uses Vite proxy (same origin), so CORS should not apply. For direct backend calls, ensure `http://localhost:5173` is allowed.
+1. Ensure both `npm run server` and `npm run client` are running (or use `npm run dev`).
+2. In the browser console, check the request URL in the Vehicle API log.
+3. In the backend terminal, confirm you see the vehicle register route being hit.
+4. In dev, either leave `VITE_API_BASE_URL` unset (Vite proxy) or set it to `http://localhost:5000` (no trailing slash).
 
-## API Reference
+---
 
-### POST /api/auth/login
+## API overview
 
-Body (JSON):
+### User (PI-360)
 
-```json
-{
-  "username_1": "email@example.com",
-  "password_1": "password",
-  "fcm_token": ""
-}
+- **POST /api/auth/login**  
+  Body: `{ "username_1": "email@example.com", "password_1": "password", "fcm_token": "" }`  
+  Returns `{ token, user }` on success.  
+  Status: 200 OK, 204 Invalid credentials, 202 Inactive, 5xx Server error.
+
+- **POST /api/vehicle/register**  
+  Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`  
+  Body: `rc_number`, `owner_name` (required); optional: `student_name`, `email`, `mobile`, `account_type`, `department` (from PI-360 or body).  
+  Returns `{ success, message, data }` – see [Vehicle registration flow (accept / reject)](#vehicle-registration-flow-accept--reject) for when it is accepted vs rejected and all error responses.
+
+### Admin (separate auth; not PI-360)
+
+- **POST /api/admin/login** – Body: `{ email, password }` → `{ status, token, admin }`
+- **GET /api/admin/me** – Headers: `Authorization: Bearer <admin_token>`
+- **GET /api/admin/vehicles** – Query: `?page=1&limit=10&search=...&vehicle_type=...`
+- **GET /api/admin/vehicles/:id/rc** – Redirects to Cloudinary RC URL
+
+---
+
+## Vehicle registration flow (accept / reject)
+
+The vehicle registration endpoint **POST /api/vehicle/register** validates the user (JWT), then validates input, checks for an existing approved registration with the same RC number, calls **Surepass** to verify the RC, and compares the **owner name** with Surepass data. The record is either **Approved** (saved with `status: 'Approved'`) or **Rejected** (saved with `status: 'Rejected'` and a `rejection_reason`).
+
+### Flow summary
+
+1. **Auth** – Request must include `Authorization: Bearer <PI-360 token>`. If missing or invalid → **401**; frontend redirects to login.
+2. **Rate limit** – Default 10 requests per 10 minutes per IP. Exceeded → **429** with message below.
+3. **Input validation** – `rc_number` (required, format `[A-Z0-9\- ]{6,20}`) and `owner_name` (required). Invalid → **400** with the first validation message.
+4. **User identity** – User ID and email must be present (from JWT/body). Missing → **400**.
+5. **Duplicate check** – If an **Approved** registration already exists for this RC number → **409**.
+6. **Surepass verification** – Backend calls Surepass RC API with `rc_number`. On failure → record is saved as **Rejected** and **400/500** is returned with the error message.
+7. **Owner name match** – Owner name from the form is normalized and compared with Surepass owner name. If they don’t match → record is saved as **Rejected** and **400** is returned.
+8. **Success** – A new registration is saved with `status: 'Approved'` and **201** is returned with success payload.
+
+### When the registration is **accepted**
+
+- **HTTP status:** 201  
+- **Response:** `{ success: true, message: 'Vehicle registered successfully', data: { id, rc_number, owner_name, vehicle_number, status } }`  
+- **Frontend:** Shows success message (e.g. “Vehicle registered successfully.”) and clears RC number and owner name.
+
+### When the registration is **rejected** or an error occurs
+
+The backend returns a JSON body of the form `{ success: false, message: '<user-facing message>', data: {} }`. The frontend displays `data.message` (or a fallback) in the error area. Possible cases:
+
+| HTTP | When | Message (example) |
+|------|------|--------------------|
+| **400** | Validation: RC number missing | `RC number is required` |
+| **400** | Validation: RC number format invalid | `Invalid RC number format` |
+| **400** | Validation: Owner name missing | `Owner name is required` |
+| **400** | User identity missing (e.g. token/body) | `User identity missing. Please log in again.` |
+| **400** | Owner name does not match Surepass | `Owner name does not match RC records` |
+| **401** | No token or invalid/expired PI-360 token | `Unauthorized - Token required...` / `Token expired - Please login again` / `Unauthorized` |
+| **409** | RC number already registered (Approved) or duplicate key | `RC number is already registered` |
+| **429** | Rate limit exceeded (register endpoint) | `Too many attempts. Try again later.` |
+| **500** | Surepass config missing (env not set) | `Surepass configuration missing` |
+| **500** | Surepass bad request (e.g. empty RC) | `RC number is required for Surepass verification` |
+| **500** | Surepass timeout / network / backend down | `Vehicle data provider is temporarily unavailable. Please try again later.` or `Surepass request timed out` / `Unable to reach Surepass service` |
+| **500** | Surepass verification failed (e.g. RC not found, invalid token) | Message from Surepass (e.g. `RC not found`, `Invalid or expired Surepass API token`) or `Surepass verification failed` |
+| **500** | Other server error (e.g. DB) | `Server Error` or the thrown error message |
+
+**Rejected records in DB:** When the failure is due to Surepass (timeout, error, or owner name mismatch), the backend still creates a **Rejected** registration with `rejection_reason` set to the message returned to the user (e.g. “Owner name does not match RC records” or “Vehicle data provider is temporarily unavailable…”). This allows admins to see attempted registrations and reasons for rejection.
+
+---
+
+## Admin dashboard
+
+- **Login:** `/admin/login` (email + password; separate from PI-360).
+- **Dashboard:** `/admin/dashboard` (after admin login).
+- Admin token is stored separately from the PI-360 user token; 401 from admin API redirects to admin login.
+
+---
+
+## Favicon & branding
+
+- Favicon is set in `client/index.html` (default: `/favicon.svg`). You can point it to the MIET logo PNG if desired.
+- Logo on the login and header can be overridden with `VITE_MIET_LOGO_URL` in the client env.
+
+---
+
+## Production build & deploy
+
+**Build frontend:**
+
+```bash
+npm run build
 ```
 
-Returns `{ token, user }` on success (200).  
-Errors: 204 (Invalid credentials), 202 (Inactive), 500 (Server error).
+**Run server in production:**
 
-### POST /api/vehicle/register
+```bash
+cd server && NODE_ENV=production npm start
+```
 
-- Headers: `Authorization: Bearer <token>`
-- Content-Type: `multipart/form-data`
-- Body: `vehicle_number`, `vehicle_type`, `rc_file`, `name`, `email`, `mobile`, `account_type`, `department`
+- In production, the server can serve `client/dist` (single process).
+- Set `CLIENT_URL` to the production frontend origin.
+- Set `client/.env.production` with `VITE_API_BASE_URL` to the production API URL.
 
-Returns `{ message, id, vehicle_number }` on success (201).
+**Checklist:**
 
-### Admin APIs (separate auth; do not use PI-360)
+- [ ] Copy `.env.example` to `.env` (server and client as needed); never commit real `.env`.
+- [ ] Set `NODE_ENV=production` for the server.
+- [ ] Set `CLIENT_URL` and CORS/origins for your domain.
+- [ ] Set `VITE_API_BASE_URL` in `client/.env.production`.
+- [ ] Use strong `JWT_SECRET` and `ADMIN_JWT_SECRET`; change default admin password after first login.
+- [ ] (Optional) Prefer HTTP-only cookies for tokens and restrict CORS to a single origin.
 
-Admin uses custom email/password stored in `admins` collection and `ADMIN_JWT_SECRET` (8hr expiry).
-
-- **POST /api/admin/login** – Body: `{ email, password }`. Returns `{ status, token, admin: { name, email, role } }`.
-- **GET /api/admin/me** – Headers: `Authorization: Bearer <admin_token>`. Returns logged-in admin.
-- **GET /api/admin/vehicles** – Query: `?page=1&limit=10&search=keyword&vehicle_type=Two-Wheeler`. Returns `{ status, total, page, limit, totalPages, data }`.
-- **GET /api/admin/vehicles/:id/rc** – Redirects to Cloudinary RC URL.
-
-## Admin Dashboard
-
-- **Login:** `/admin/login` (email + password, separate from PI-360).
-- **Dashboard:** `/admin/dashboard` (after admin login).
-- Token stored as `miet_admin_token`; never mixed with PI-360 token.
-
-## Cloudinary
-
-RC files are stored on Cloudinary (folder: `miet-vehicle-rc`). Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` in `.env`. Never expose the API secret to the frontend.
-
-**Migration:** If you have existing records with `rc_path`, run a migration to either remove them or manually upload files to Cloudinary and update to `rc_url`/`cloudinary_public_id`.
+---
 
 ## Security
 
-- JWT verification on protected routes
-- File type/size validation (PDF, JPG, PNG, max 5MB)
-- Files stored outside public directory
-- Input sanitization
-- SQL injection prevented (Mongoose)
+- JWT verification on protected routes (user and admin).
+- File type and size checks (e.g. PDF, JPG, PNG; max 5MB).
+- RC files stored on Cloudinary; not in the public filesystem.
+- Input validation and sanitization; Mongoose for DB (no raw SQL).
+- Helmet, rate limiting, compression; CORS driven by `CLIENT_URL`/env.
 
-## Production Build
+---
 
-```bash
-cd client && npm run build
-cd ../server && NODE_ENV=production npm start
-```
+## License & copyright
 
-- Backend serves `client/dist` when `NODE_ENV=production` (single process).
-- Set `CLIENT_URL` to your frontend origin (e.g. `https://vehicle.mietjammu.in`) for CORS.
-- Set `client/.env.production` with `VITE_API_BASE_URL` to your backend URL (e.g. `https://api.mietjammu.in`).
-
-## Production & Deployment
-
-- **No hardcoded URLs**: Frontend uses `VITE_API_BASE_URL`; backend uses `PORT`, `CLIENT_URL`, `MONGODB_URI`, Cloudinary and JWT from env.
-- **Security**: Helmet, rate limiting, compression, CORS from `CLIENT_URL`; Morgan only in dev.
-- **Secrets**: Keep `.env` out of git; use `.env.example` as a template; set real secrets in the host (e.g. env vars or secret manager).
-- **Tokens**: PI-360 token for vehicle flow; Admin JWT (8h) for dashboard; 401 from API triggers logout and redirect to the correct login page.
-
-## Deployment Checklist
-
-- [ ] Copy `.env.example` to `.env` (root/server and client) and fill in real values.
-- [ ] Set `NODE_ENV=production` when running the server.
-- [ ] Set `CLIENT_URL` to the production frontend URL.
-- [ ] Set `client/.env.production` with `VITE_API_BASE_URL` to the production API URL.
-- [ ] Run `cd client && npm run build` and ensure `server` serves `client/dist` (already configured).
-- [ ] Ensure `.env` is in `.gitignore` and never committed.
-- [ ] Use strong `JWT_SECRET` and `ADMIN_JWT_SECRET`; change default admin password after first login.
-- [ ] Optional: use HTTP-only cookies for tokens and tighten CORS to a single origin.
+© 2026 MIET Jammu. All rights reserved.
