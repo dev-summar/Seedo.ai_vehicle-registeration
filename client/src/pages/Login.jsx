@@ -1,23 +1,40 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useAdminAuth } from '../context/AdminAuthContext';
 import { login as apiLogin } from '../api/client';
+import { adminLogin } from '../api/adminClient';
 import Spinner from '../components/Spinner';
 import { Mail, Lock } from 'lucide-react';
 
 const MIET_LOGO_URL = import.meta.env.VITE_MIET_LOGO_URL || 'https://mietjmu.in/wp-content/uploads/2020/02/MIET_LOGO_AUTONOMOUS.webp';
 
 export default function Login() {
+  const navigate = useNavigate();
   const { login } = useAuth();
+  const { login: adminLoginContext } = useAdminAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [adminMode, setAdminMode] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
+      if (adminMode) {
+        const { ok, status, data } = await adminLogin(email.trim(), password);
+        if (ok && data?.token) {
+          adminLoginContext(data.token, data.admin || null);
+          navigate('/admin/dashboard', { replace: true });
+          return;
+        }
+        setError(data?.message || 'Invalid email or password.');
+        return;
+      }
+
       const { ok, status, data } = await apiLogin(email.trim(), password);
       if (import.meta.env.DEV) console.log('LOGIN RESPONSE:', data);
 
@@ -64,6 +81,15 @@ export default function Login() {
           <p className="text-center text-sm mt-2 mb-6" style={{ color: '#64748b' }}>
             Sign in with your PI-360 Credentials
           </p>
+          <div className="flex justify-center mb-3">
+            <img
+              src="https://pi360.net/pi360_website/wordpress/wp-content/uploads/2025/12/icon-pi360.png"
+              alt="PI-360"
+              width={40}
+              height={40}
+              className="object-contain"
+            />
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
@@ -136,6 +162,21 @@ export default function Login() {
               )}
             </button>
           </form>
+
+          <div className="flex flex-col items-center mt-6">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <span className="text-sm text-slate-600">Login as Admin</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={adminMode}
+                onClick={() => setAdminMode(!adminMode)}
+                className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 ${adminMode ? 'bg-blue-500 border-blue-500' : 'bg-slate-200 border-slate-200'}`}
+              >
+                <span className={`inline-block h-5 w-5 rounded-full bg-white border border-slate-200 transition-transform ${adminMode ? 'translate-x-5' : 'translate-x-0.5'}`} style={{ marginTop: '1px' }} />
+              </button>
+            </label>
+          </div>
 
           <p className="text-center text-xs mt-8" style={{ color: '#94a3b8' }}>
             © 2026 MIET Jammu. All rights reserved.

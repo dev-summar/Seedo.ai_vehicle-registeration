@@ -45,7 +45,7 @@ export default function AdminDashboard() {
         setTotalPages(typeof data.totalPages === 'number' ? data.totalPages : 1);
       } else if (status === 401) {
         logout();
-        navigate('/admin/login', { replace: true });
+        navigate('/login', { replace: true });
       } else {
         setError(data?.message || 'Failed to load vehicles');
       }
@@ -77,7 +77,7 @@ export default function AdminDashboard() {
         setTotal((t) => Math.max(0, t - 1));
       } else if (status === 401) {
         logout();
-        navigate('/admin/login', { replace: true });
+        navigate('/login', { replace: true });
       } else {
         setError(data?.message || 'Failed to delete');
       }
@@ -186,7 +186,7 @@ export default function AdminDashboard() {
                     Status
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
-                    RC Number
+                    Vehicle Number
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
                     Owner Name

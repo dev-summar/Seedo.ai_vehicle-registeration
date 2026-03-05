@@ -66,7 +66,7 @@ export default function VehicleForm() {
     setError('');
     setSuccess('');
     if (!rc_number.trim() || !owner_name.trim()) {
-      setError('RC number and Owner name are required.');
+      setError('Vehicle number and Owner name are required.');
       return;
     }
     setLoading(true);
@@ -153,7 +153,7 @@ export default function VehicleForm() {
             <div className="vehicle-registration-grid two-cols">
               <div className="vehicle-registration-field">
                 <label htmlFor="rc_number" className="vehicle-registration-label">
-                  RC Number <span className="required" aria-hidden>*</span>
+                  Vehicle Number <span className="required" aria-hidden>*</span>
                 </label>
                 <input
                   id="rc_number"
@@ -161,7 +161,7 @@ export default function VehicleForm() {
                   value={rc_number}
                   onChange={handleRcChange}
                   required
-                  placeholder="Enter RC number"
+                  placeholder="Enter vehicle number"
                   maxLength={25}
                   className="vehicle-registration-input rc-uppercase"
                   autoComplete="off"

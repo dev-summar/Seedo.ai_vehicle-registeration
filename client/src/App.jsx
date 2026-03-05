@@ -5,7 +5,6 @@ import { useAdminAuth } from './context/AdminAuthContext';
 import { setUnauthorizedHandler } from './services/api';
 import Login from './pages/Login';
 import VehicleForm from './pages/VehicleForm';
-import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import Layout from './components/Layout';
 import AdminLayout from './components/AdminLayout';
@@ -37,20 +36,7 @@ function PublicRoute({ children }) {
   return children;
 }
 
-// -------- Admin (custom login, no PI-360) --------
-function AdminPublicRoute({ children }) {
-  const { adminToken, isLoading } = useAdminAuth();
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-slate-600" />
-      </div>
-    );
-  }
-  if (adminToken) return <Navigate to="/admin/dashboard" replace />;
-  return children;
-}
-
+// -------- Admin (login via main page with "Login as Admin" toggle) --------
 function AdminProtectedRoute({ children }) {
   const { adminToken, isLoading } = useAdminAuth();
   if (isLoading) {
@@ -60,7 +46,7 @@ function AdminProtectedRoute({ children }) {
       </div>
     );
   }
-  if (!adminToken) return <Navigate to="/admin/login" replace />;
+  if (!adminToken) return <Navigate to="/login" replace />;
   return children;
 }
 
@@ -75,7 +61,7 @@ function ApiUnauthorizedSetup() {
         navigate('/login', { replace: true });
       } else {
         adminLogout();
-        navigate('/admin/login', { replace: true });
+        navigate('/login', { replace: true });
       }
     });
     return () => setUnauthorizedHandler(null);
@@ -108,19 +94,9 @@ export default function App() {
         }
       />
 
-      {/* Admin: separate auth, no PI-360 */}
-      <Route
-        path="/admin"
-        element={<Navigate to="/admin/login" replace />}
-      />
-      <Route
-        path="/admin/login"
-        element={
-          <AdminPublicRoute>
-            <AdminLogin />
-          </AdminPublicRoute>
-        }
-      />
+      {/* Admin: login via main Login page with "Login as Admin" toggle */}
+      <Route path="/admin" element={<Navigate to="/login" replace />} />
+      <Route path="/admin/login" element={<Navigate to="/login" replace />} />
       <Route
         path="/admin/dashboard"
         element={
