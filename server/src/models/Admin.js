@@ -13,4 +13,5 @@ const adminSchema = new mongoose.Schema({
 });
 // unique: true on email above already creates the index
 
-module.exports = mongoose.model('Admin', adminSchema);
+// Use a dedicated collection in the same DB (no separate database name in URI)
+module.exports = mongoose.model('Admin', adminSchema, 'vehicle_admins');

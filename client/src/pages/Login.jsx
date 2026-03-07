@@ -8,6 +8,7 @@ import Spinner from '../components/Spinner';
 import { Mail, Lock } from 'lucide-react';
 
 const MIET_LOGO_URL = import.meta.env.VITE_MIET_LOGO_URL || 'https://mietjmu.in/wp-content/uploads/2020/02/MIET_LOGO_AUTONOMOUS.webp';
+const PI360_ICON_URL = import.meta.env.VITE_PI360_ICON_URL || 'https://pi360.net/pi360_website/wordpress/wp-content/uploads/2025/12/icon-pi360.png';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -36,7 +37,6 @@ export default function Login() {
       }
 
       const { ok, status, data } = await apiLogin(email.trim(), password);
-      if (import.meta.env.DEV) console.log('LOGIN RESPONSE:', data);
 
       // API returns { statusCode: 200, message, token, data: { name, email, mobileno, ... } }
       const token = data?.token;
@@ -78,12 +78,12 @@ export default function Login() {
           <h1 className="text-center text-[26px] font-semibold text-slate-800" style={{ fontWeight: 600 }}>
             MIET Jammu – Vehicle Registration
           </h1>
-          <p className="text-center text-sm mt-2 mb-6" style={{ color: '#64748b' }}>
+          <p className="text-center text-lg font-bold mt-2 mb-6 text-slate-700">
             Sign in with your PI-360 Credentials
           </p>
           <div className="flex justify-center mb-3">
             <img
-              src="https://pi360.net/pi360_website/wordpress/wp-content/uploads/2025/12/icon-pi360.png"
+              src={PI360_ICON_URL}
               alt="PI-360"
               width={40}
               height={40}

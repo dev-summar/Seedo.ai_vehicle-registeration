@@ -2,6 +2,24 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Production: validate required env so requests don't fail with unclear errors
+if (isProduction) {
+  const required = [
+    'MONGODB_URI',
+    'JWT_SECRET',
+    'ADMIN_JWT_SECRET',
+    'PI360_API_URL',
+    'PI360_INSTITUTE_ID',
+  ];
+  const missing = required.filter((key) => !process.env[key]?.trim());
+  if (missing.length) {
+    console.error('Production missing required env:', missing.join(', '));
+    process.exit(1);
+  }
+}
+
 // Keep process alive on unhandled errors (log instead of exit)
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
@@ -23,7 +41,6 @@ const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const isProduction = process.env.NODE_ENV === 'production';
 
 connectDB();
 

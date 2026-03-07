@@ -167,7 +167,11 @@ export default function VehicleForm() {
                   autoComplete="off"
                   aria-required="true"
                   aria-invalid={error && !rc_number.trim() ? 'true' : undefined}
+                  aria-describedby="rc_number-hint"
                 />
+                <p className="vehicle-registration-field-hint" id="rc_number-hint">
+                  Enter the vehicle number as per your RC.
+                </p>
               </div>
               <div className="vehicle-registration-field">
                 <label htmlFor="owner_name" className="vehicle-registration-label">
@@ -184,7 +188,11 @@ export default function VehicleForm() {
                   autoComplete="off"
                   aria-required="true"
                   aria-invalid={error && !owner_name.trim() ? 'true' : undefined}
+                  aria-describedby="owner_name-hint"
                 />
+                <p className="vehicle-registration-field-hint" id="owner_name-hint">
+                  Name in which the vehicle is registered. Enter exactly as printed on RC (with or without title like Mr/Mrs)—must match RC exactly.
+                </p>
               </div>
             </div>
           </section>

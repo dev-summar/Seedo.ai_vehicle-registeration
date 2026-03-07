@@ -37,4 +37,9 @@ vehicleRegistrationSchema.index(
   { unique: true, partialFilterExpression: { status: 'Approved' } }
 );
 
-module.exports = mongoose.model('VehicleRegistration', vehicleRegistrationSchema);
+// Use a dedicated collection in the same DB (no separate database name in URI)
+module.exports = mongoose.model(
+  'VehicleRegistration',
+  vehicleRegistrationSchema,
+  'vehicle_registrations'
+);
